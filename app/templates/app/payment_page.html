@@ -1,0 +1,179 @@
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block title %}Payment{% endblock title %}
+{% block main-content %}
+
+<style>
+  .StripeElement {
+    box-sizing: border-box;
+
+    height: 40px;
+
+    padding: 10px 12px;
+
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: white;
+
+    box-shadow: 0 1px 3px 0 #e6ebf1;
+    -webkit-transition: box-shadow 150ms ease;
+    transition: box-shadow 150ms ease;
+  }
+
+  .StripeElement--focus {
+    box-shadow: 0 1px 3px 0 #cfd7df;
+  }
+
+  .StripeElement--invalid {
+    border-color: #fa755a;
+  }
+
+  .StripeElement--webkit-autofill {
+    background-color: #fefde5 !important;
+  }
+  .form-row,
+  .submit-btn,
+  .card-element {
+    width: 100%;
+  }
+  .form-row {
+    padding: 2em;
+  }
+  #paypal-button-container {
+    margin-top: 2em;
+    width: 100%;
+  }
+</style>
+
+  <br>
+  <!-- Alerts -->
+
+
+
+<div class="container" style="margin-bottom:45px; margin-top:50px;">
+
+  <div class="row">
+    <div class="col-sm-6">
+		<h3 class="text-center">Credit Card</h3>
+                        <form method="POST" id="payment-form" class="payment-form">
+                            {% csrf_token %}
+                            <div class="form-row">
+                              <label for="card-element">
+                                Credit or debit card
+                              </label>
+                              <div id="card-element" class="card-element"></div>
+                              <div id="card-errors" role="alert"></div>
+                              <button class="btn btn-info submit-btn" type="submit">
+                                Submit Payment
+                              </button>
+
+                              <div id="paypal-button-container"></div>
+                            </div>
+                          </form>
+	</div>
+    <div class="col-sm-6">
+      <div class="card">
+        <div class="card-body">
+          <h4><b>Total Cost : Rs. <span id="money_prc">{{totalamount}}</span></b></h4>
+          <hr>
+      <h4>Order Summary</h4>
+      <hr>
+      {% for item in ids_od %}
+      <div class="card mb-2">
+        <div class="card-body">
+          <h5>Product: {{item.product.title}}</h5>
+          <p>Quantity: {{item.quantity}}</p>
+          <p>Day: {{item.Days}}</p>
+          <p>Single Price: {{item.product.selling_price}}</p>
+          <p class="fw-bold">Item Total: {{item.total_cost}}</p>
+        </div>
+      </div>
+      {% endfor %}
+      <p class="fw-bold">Item Grand Total : (TK. {{amount}})</p>
+      <p class="fw-bold">Total Cost = Item Grand Total(TK. {{amount}}) + Shipping(TK. 70) = TK. {{totalamount}}</p>
+
+
+
+        </div>
+      </div>
+    </div>
+
+
+</div>
+</div>
+
+
+
+<script src="https://js.stripe.com/v3/"></script>
+
+<!-- stripe payments -->
+<script>
+  var stripe = Stripe("pk_test_51IWuSRFzvY3Oon8K8D1ifAh7gdslJbsw3KJbpkDzsL6hD0Ghy3ofVA1xjLk5eZHOzZnUta8A0fykbjP0ScpxTe5m00PLxoAn9p");
+
+  var elements = stripe.elements();
+
+  var style = {
+    base: {
+      color: "#32325d",
+      fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+      fontSmoothing: "antialiased",
+      fontSize: "16px",
+      "::placeholder": {
+        color: "#aab7c4",
+      },
+    },
+    invalid: {
+      color: "#fa755a",
+      iconColor: "#fa755a",
+    },
+  };
+
+  var card = elements.create("card", { style: style });
+
+  card.mount("#card-element");
+
+  card.on("change", function (event) {
+    var displayError = document.getElementById("card-errors");
+    if (event.error) {
+      displayError.textContent = event.error.message;
+    } else {
+      displayError.textContent = "";
+    }
+  });
+
+  var form = document.getElementById("payment-form");
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    stripe.createToken(card).then(function (result) {
+      if (result.error) {
+        console.log(result.error);
+        var errorElement = document.getElementById("card-errors");
+        errorElement.textContent = result.error.message;
+      } else {
+        stripeTokenHandler(result.token);
+      }
+    });
+  });
+
+  function stripeTokenHandler(token) {
+    var money_prc = document.getElementById('money_prc').innerHTML;
+
+    var form = document.getElementById("payment-form");
+    var hiddenInput = document.createElement("input");
+
+    money_and_token = money_prc+','+token.id
+
+    hiddenInput.setAttribute("type", "hidden");
+    hiddenInput.setAttribute("name", "money_amount");
+    hiddenInput.setAttribute("value", money_and_token);
+
+    form.appendChild(hiddenInput);
+    form.submit();
+  }
+</script>
+<!-- stripe payments -->
+
+
+{% endblock %}
